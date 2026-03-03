@@ -14,7 +14,6 @@ class Post(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    # НОВЕ ПОЛЕ ДЛЯ SOFT DELETE
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     author = relationship("User", back_populates="posts")
