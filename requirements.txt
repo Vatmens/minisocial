@@ -4,6 +4,7 @@ sqlalchemy
 asyncpg
 alembic
 pydantic[email]
+pydantic-settings
 bcrypt
 pyjwt
 python-multipart

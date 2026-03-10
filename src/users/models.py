@@ -1,9 +1,9 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.database.database import Base
+from src.database.core import Base
+from src.models import TimeStampMixin
 
-
-class User(Base):
+class User(Base, TimeStampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)

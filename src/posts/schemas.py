@@ -27,3 +27,5 @@ class PostUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
 
+class LikeResponse(BaseModel):
+    message: str

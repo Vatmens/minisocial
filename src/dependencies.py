@@ -1,25 +1,19 @@
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-
-from app.database.database import AsyncSessionLocal
-from app.models.User_model import User
-from app.core.config import SECRET_KEY, ALGORITHM
 from typing import Optional
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+from src.users.models import User
+from src.config import settings
+from src.unitofwork import UnitOfWork, get_uow
 
-async def get_db() -> AsyncSession:
-    async with AsyncSessionLocal() as session:
-        yield session
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 async def get_current_user(
         token: str = Depends(oauth2_scheme),
-        db: AsyncSession = Depends(get_db)
+        uow: UnitOfWork = Depends(get_uow)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -27,15 +21,15 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except jwt.InvalidTokenError:
         raise credentials_exception
 
-    result = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result.scalar_one_or_none()
+
+    user = await uow.users.get_by_id(int(user_id))
 
     if user is None:
         raise credentials_exception
@@ -44,17 +38,18 @@ async def get_current_user(
 
 async def get_optional_current_user(
         token: Optional[str] = Depends(oauth2_scheme_optional),
-        db: AsyncSession = Depends(get_db)
+        uow: UnitOfWork = Depends(get_uow)
 ) -> Optional[User]:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             return None
     except jwt.InvalidTokenError:
         return None
 
-    result = await db.execute(select(User).where(User.id == int(user_id)))
-    return result.scalar_one_or_none()
+
+    user = await uow.users.get_by_id(int(user_id))
+    return user
